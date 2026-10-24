@@ -215,14 +215,27 @@ const TransactionForm = ({ cashbookId, onSuccess }: TransactionFormProps) => {
         <label htmlFor="transaction-remarks" className={labelClassName}>
           Description <span className="font-normal text-slate-400">(optional)</span>
         </label>
-        <textarea
-          id="transaction-remarks"
-          className={`${inputClassName} h-20 resize-y py-2.5`}
-          placeholder="What was this transaction for?"
-          value={form.remarks}
-          onChange={(event) => handleChange("remarks", event.target.value)}
-          rows={3}
-        />
+       <textarea
+  id="transaction-remarks"
+  className={`${inputClassName} h-20 resize-y py-2.5`}
+  placeholder="What was this transaction for?"
+  value={form.remarks}
+  onChange={(event) => handleChange("remarks", event.target.value)}
+  onKeyDown={(event) => {
+    if (
+      event.key !== "Enter" ||
+      event.shiftKey ||
+      event.nativeEvent.isComposing ||
+      isPending
+    ) {
+      return;
+    }
+
+    event.preventDefault();
+    event.currentTarget.form?.requestSubmit();
+  }}
+  rows={3}
+/>
       </div>
 
       <details className="group rounded-md border border-slate-200">
