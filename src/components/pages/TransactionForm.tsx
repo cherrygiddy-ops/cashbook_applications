@@ -96,20 +96,6 @@ const TransactionForm = ({ cashbookId, onSuccess }: TransactionFormProps) => {
   return (
     <form
       onSubmit={handleSubmit}
-      onKeyDown={(event) => {
-        if (
-          event.key !== "Enter" ||
-          event.nativeEvent.isComposing ||
-          event.target instanceof HTMLTextAreaElement ||
-          event.target instanceof HTMLButtonElement ||
-          isPending
-        ) {
-          return;
-        }
-
-        event.preventDefault();
-        event.currentTarget.requestSubmit();
-      }}
       className="w-full space-y-5 py-2"
     >
       {errorMessage && (
@@ -176,6 +162,14 @@ const TransactionForm = ({ cashbookId, onSuccess }: TransactionFormProps) => {
             placeholder="0.00"
             value={form.amount}
             onChange={(event) => handleChange("amount", event.target.value)}
+            onKeyDown={(event) => {
+              if (event.key !== "Enter" || event.nativeEvent.isComposing || isPending) {
+                return;
+              }
+
+              event.preventDefault();
+              event.currentTarget.form?.requestSubmit();
+            }}
             required
           />
         </div>
