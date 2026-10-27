@@ -8,6 +8,7 @@ import {
   CalendarDays,
   CreditCard,
   Download,
+  LoaderCircle,
   Search,
   Wallet,
 } from "lucide-react";
@@ -19,137 +20,9 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog";
+import useTransactions from "@/hooks/useTransactions";
+import useCashbooks from "@/hooks/useCashbooks";
 import TransactionForm from "./TransactionForm";
-
-type TransactionKind = "CASH_IN" | "CASH_OUT";
-
-interface Transaction {
-  id: string;
-  title: string;
-  category: string;
-  contact: string;
-  recordedBy: string;
-  date: string;
-  time: string;
-  payment: string;
-  amount: number;
-  type: TransactionKind;
-}
-
-const transactions: Transaction[] = [
-  {
-    id: "CB-2408",
-    title: "August sales",
-    category: "Sales revenue",
-    contact: "Walk-in customers",
-    recordedBy: "Grace Njeri",
-    date: "28 Aug 2026",
-    time: "10:42 AM",
-    payment: "M-Pesa",
-    amount: 48500,
-    type: "CASH_IN",
-  },
-  {
-    id: "CB-2407",
-    title: "Shop rent",
-    category: "Rent & utilities",
-    contact: "Kilimani Properties",
-    recordedBy: "Peter Kamau",
-    date: "27 Aug 2026",
-    time: "3:18 PM",
-    payment: "Bank transfer",
-    amount: 28000,
-    type: "CASH_OUT",
-  },
-  {
-    id: "CB-2406",
-    title: "Stock replenishment",
-    category: "Inventory",
-    contact: "Nairobi Wholesale Ltd",
-    recordedBy: "Grace Njeri",
-    date: "26 Aug 2026",
-    time: "11:06 AM",
-    payment: "M-Pesa",
-    amount: 16400,
-    type: "CASH_OUT",
-  },
-  {
-    id: "CB-2405",
-    title: "Consulting payment",
-    category: "Services",
-    contact: "Amina Wanjiku",
-    recordedBy: "David Otieno",
-    date: "25 Aug 2026",
-    time: "9:30 AM",
-    payment: "Bank transfer",
-    amount: 32000,
-    type: "CASH_IN",
-  },
-  {
-    id: "CB-2404",
-    title: "Internet & phone",
-    category: "Rent & utilities",
-    contact: "Safaricom PLC",
-    recordedBy: "Peter Kamau",
-    date: "23 Aug 2026",
-    time: "4:51 PM",
-    payment: "M-Pesa",
-    amount: 4500,
-    type: "CASH_OUT",
-  },
-  {
-    id: "CB-2403",
-    title: "Weekend market sales",
-    category: "Sales revenue",
-    contact: "Walk-in customers",
-    recordedBy: "Grace Njeri",
-    date: "22 Aug 2026",
-    time: "6:12 PM",
-    payment: "Cash",
-    amount: 18750,
-    type: "CASH_IN",
-  },
-  {
-    id: "CB-2402",
-    title: "Packaging supplies",
-    category: "Supplies",
-    contact: "PackPro Kenya",
-    recordedBy: "David Otieno",
-    date: "21 Aug 2026",
-    time: "1:24 PM",
-    payment: "Card",
-    amount: 6200,
-    type: "CASH_OUT",
-  },
-  {
-    id: "CB-2401",
-    title: "Project deposit",
-    category: "Services",
-    contact: "J. Mwangi",
-    recordedBy: "Peter Kamau",
-    date: "20 Aug 2026",
-    time: "8:55 AM",
-    payment: "Bank transfer",
-    amount: 55000,
-    type: "CASH_IN",
-  },
-];
-
-const openingBalance = 329500;
-const balanceByTransactionId = [...transactions]
-  .reverse()
-  .reduce<{ balance: number; byId: Record<string, number> }>(
-    (running, transaction) => {
-      const balance =
-        running.balance +
-        (transaction.type === "CASH_IN" ? transaction.amount : -transaction.amount);
-      return {
-        balance,
-        byId: { ...running.byId, [transaction.id]: balance },
-      };
-    },
-    { balance: openingBalance, byId: {} },
-  ).byId;
 
 const formatAmount = (amount: number) =>
   new Intl.NumberFormat("en-KE", {
@@ -158,32 +31,18 @@ const formatAmount = (amount: number) =>
     maximumFractionDigits: 0,
   }).format(amount);
 
-const summary = [
-  {
-    label: "Money in",
-    amount: "KSh 154,250",
-    detail: "12 transactions this month",
-    icon: ArrowDownLeft,
-    tone: "text-emerald-700 bg-emerald-50",
-  },
-  {
-    label: "Money out",
-    amount: "KSh 55,100",
-    detail: "8 transactions this month",
-    icon: ArrowUpRight,
-    tone: "text-rose-700 bg-rose-50",
-  },
-  {
-    label: "Net movement",
-    amount: "+KSh 99,150",
-    detail: "Across all cashbooks",
-    icon: ArrowDownUp,
-    tone: "text-sky-700 bg-sky-50",
-  },
-];
-
 export default function TransactionPage() {
+  const { transactions, errorMessage, isError, isLoading } = useTransactions();
+  const { cashbooks } = useCashbooks();
   const [searchParams, setSearchParams] = useSearchParams();
+  const requestedCashbookId = Number(searchParams.get("cashbookId"));
+  const activeCashbookId = Number.isInteger(requestedCashbookId) && requestedCashbookId > 0
+    ? requestedCashbookId
+    : null;
+  const activeCashbook = cashbooks.find((cashbook) => cashbook.id === activeCashbookId);
+  const scopedTransactions = activeCashbookId
+    ? transactions.filter((transaction) => transaction.cashbookId === activeCashbookId)
+    : transactions;
   const [query, setQuery] = useState("");
   const [filter, setFilter] = useState("ALL");
   const [dialogOpen, setDialogOpen] = useState(
@@ -201,9 +60,40 @@ export default function TransactionPage() {
     setSearchParams(nextSearchParams, { replace: true });
   };
 
-  const visibleTransactions = transactions.filter((transaction) => {
+  const now = new Date();
+  const monthTransactions = scopedTransactions.filter((transaction) => {
+    const date = new Date(`${transaction.transactionDate}T00:00:00`);
+    return date.getFullYear() === now.getFullYear() && date.getMonth() === now.getMonth();
+  });
+  const sumByType = (records: typeof transactions, type: "CASH_IN" | "CASH_OUT") =>
+    records.filter((transaction) => transaction.type === type)
+      .reduce((total, transaction) => total + transaction.amount, 0);
+  const summary = [
+    {
+      label: "Money in",
+      amount: formatAmount(sumByType(monthTransactions, "CASH_IN")),
+      detail: `${monthTransactions.filter((transaction) => transaction.type === "CASH_IN").length} transactions this month`,
+      icon: ArrowDownLeft,
+      tone: "text-emerald-700 bg-emerald-50",
+    },
+    {
+      label: "Money out",
+      amount: formatAmount(sumByType(monthTransactions, "CASH_OUT")),
+      detail: `${monthTransactions.filter((transaction) => transaction.type === "CASH_OUT").length} transactions this month`,
+      icon: ArrowUpRight,
+      tone: "text-rose-700 bg-rose-50",
+    },
+    {
+      label: "Net movement",
+      amount: `${sumByType(scopedTransactions, "CASH_IN") - sumByType(scopedTransactions, "CASH_OUT") < 0 ? "−" : "+"}${formatAmount(Math.abs(sumByType(scopedTransactions, "CASH_IN") - sumByType(scopedTransactions, "CASH_OUT")))}`,
+      detail: activeCashbook ? `In ${activeCashbook.name}` : "Across fetched transactions",
+      icon: ArrowDownUp,
+      tone: "text-sky-700 bg-sky-50",
+    },
+  ];
+  const visibleTransactions = scopedTransactions.filter((transaction) => {
     const matchesType = filter === "ALL" || transaction.type === filter;
-    const searchText = `${transaction.title} ${transaction.category} ${transaction.contact} ${transaction.id}`.toLowerCase();
+    const searchText = `${transaction.transactionNumber} ${transaction.remarks ?? ""} ${transaction.createdBy} ${transaction.paymentMode}`.toLowerCase();
     return matchesType && searchText.includes(query.trim().toLowerCase());
   });
 
@@ -215,10 +105,10 @@ export default function TransactionPage() {
             Cashbook / Activity
           </p>
           <h1 className="font-display text-3xl font-semibold text-slate-900">
-            Transactions
+            {activeCashbook ? `${activeCashbook.name} transactions` : "Transactions"}
           </h1>
           <p className="mt-2 text-sm text-slate-500">
-            A clear view of every shilling moving through your cashbooks.
+            {activeCashbook ? `All activity recorded in ${activeCashbook.name}.` : "A clear view of every shilling moving through your cashbooks."}
           </p>
         </div>
 
@@ -244,11 +134,11 @@ export default function TransactionPage() {
               <DialogHeader>
                 <DialogTitle>Record a transaction</DialogTitle>
                 <DialogDescription>
-                  Add an income or expense to your main cashbook.
+                  {activeCashbook ? `Add an income or expense to ${activeCashbook.name}.` : "Add an income or expense to your main cashbook."}
                 </DialogDescription>
               </DialogHeader>
               <TransactionForm
-                cashbookId={1}
+                cashbookId={activeCashbookId ?? 1}
                 onSuccess={() => handleDialogOpenChange(false)}
               />
             </DialogContent>
@@ -286,9 +176,7 @@ export default function TransactionPage() {
               <h2 className="font-display text-lg font-semibold text-slate-900">
                 Recent activity
               </h2>
-              <span className="rounded-full bg-slate-100 px-2 py-0.5 text-xs font-medium text-slate-600">
-                Sample data
-              </span>
+              {isLoading && <LoaderCircle className="h-4 w-4 animate-spin text-slate-400" aria-label="Loading transactions" />}
             </div>
             <p className="mt-1 text-sm text-slate-500">
               Your latest cashbook entries
@@ -325,7 +213,7 @@ export default function TransactionPage() {
 
         <div className="flex items-center gap-2 border-b border-slate-100 bg-slate-50/70 px-4 py-3 text-xs font-medium text-slate-500 sm:px-5">
           <CalendarDays className="h-4 w-4" />
-          <span>Running balance · Opening balance {formatAmount(openingBalance)} · 20–28 August 2026</span>
+              <span>Transaction history · {scopedTransactions.length} records loaded</span>
         </div>
 
         <div className="overflow-x-auto">
@@ -342,8 +230,26 @@ export default function TransactionPage() {
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100">
+              {isError && (
+                <tr>
+                  <td colSpan={7} role="alert" className="px-5 py-10 text-center text-sm text-rose-700">
+                    {errorMessage || "Unable to load transactions."}
+                  </td>
+                </tr>
+              )}
+              {isLoading && (
+                <tr>
+                  <td colSpan={7} className="px-5 py-10 text-center text-sm text-slate-500">
+                    <LoaderCircle className="mr-2 inline h-4 w-4 animate-spin" />
+                    Loading transactions...
+                  </td>
+                </tr>
+              )}
               {visibleTransactions.map((transaction) => {
                 const isIncome = transaction.type === "CASH_IN";
+                const date = new Date(`${transaction.transactionDate}T00:00:00`);
+                const createdAt = new Date(transaction.createdAt);
+                const paymentLabels = { CASH: "Cash", MPESA: "M-Pesa", BANK: "Bank transfer", CARD: "Card" };
                 return (
                   <tr key={transaction.id} className="transition hover:bg-slate-50/80">
                     <td className="px-5 py-4">
@@ -361,33 +267,33 @@ export default function TransactionPage() {
                         </span>
                         <span className="min-w-0">
                           <span className="block truncate text-sm font-semibold text-slate-800">
-                            {transaction.title}
+                            {transaction.remarks || transaction.transactionNumber}
                           </span>
                           <span className="mt-0.5 block truncate text-xs text-slate-500">
-                            {transaction.contact} · {transaction.category}
+                            {transaction.contactId ? `Contact #${transaction.contactId}` : "No contact"} · {transaction.categoryId ? `Category #${transaction.categoryId}` : "Uncategorized"}
                           </span>
                         </span>
                       </div>
                     </td>
                     <td className="whitespace-nowrap px-4 py-4 text-sm text-slate-600">
-                      {transaction.recordedBy}
+                      {transaction.createdBy}
                     </td>
                     <td className="px-4 py-4">
                       <span className="block whitespace-nowrap text-sm text-slate-700">
-                        {transaction.date}
+                        {new Intl.DateTimeFormat("en-KE", { dateStyle: "medium" }).format(date)}
                       </span>
                       <span className="mt-0.5 block text-xs text-slate-400">
-                        {transaction.time}
+                        {Number.isNaN(createdAt.getTime()) ? "" : new Intl.DateTimeFormat("en-KE", { hour: "numeric", minute: "2-digit" }).format(createdAt)}
                       </span>
                     </td>
                     <td className="px-4 py-4">
                       <span className="inline-flex items-center gap-2 text-sm text-slate-600">
-                        {transaction.payment === "Cash" ? (
+                        {transaction.paymentMode === "CASH" ? (
                           <Banknote className="h-4 w-4 text-slate-400" />
                         ) : (
                           <CreditCard className="h-4 w-4 text-slate-400" />
                         )}
-                        {transaction.payment}
+                        {paymentLabels[transaction.paymentMode]}
                       </span>
                     </td>
                     <td
@@ -410,12 +316,12 @@ export default function TransactionPage() {
                       </span>
                     </td>
                     <td className="whitespace-nowrap bg-slate-50/40 px-5 py-4 text-right text-sm font-semibold tabular-nums text-slate-800">
-                      {formatAmount(balanceByTransactionId[transaction.id])}
+                      {formatAmount(transaction.runningBalance)}
                     </td>
                   </tr>
                 );
               })}
-              {visibleTransactions.length === 0 && (
+              {!isLoading && !isError && visibleTransactions.length === 0 && (
                 <tr>
                   <td colSpan={7} className="px-5 py-14 text-center">
                     <Wallet className="mx-auto h-6 w-6 text-slate-300" />
@@ -434,9 +340,9 @@ export default function TransactionPage() {
 
         <div className="flex flex-col gap-2 border-t border-slate-100 px-5 py-3 text-xs text-slate-500 sm:flex-row sm:items-center sm:justify-between">
           <span>
-            Showing {visibleTransactions.length} of {transactions.length} sample transactions
+            Showing {visibleTransactions.length} of {scopedTransactions.length} transactions
           </span>
-          <span>Cashbook balance: <strong className="font-semibold text-slate-700">KSh 428,650</strong></span>
+          <span>Latest running balance: <strong className="font-semibold text-slate-700">{scopedTransactions[0] ? formatAmount(scopedTransactions[0].runningBalance) : "—"}</strong></span>
         </div>
       </section>
     </div>

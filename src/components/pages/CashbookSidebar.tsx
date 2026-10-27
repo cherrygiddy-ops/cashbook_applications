@@ -10,6 +10,7 @@ import {
   Users,
   Settings,
   ArrowLeftRight,
+  Building2,
 } from "lucide-react";
 
 import {
@@ -33,7 +34,6 @@ const navigationGroups = [
     label: "Overview",
     items: [
       { title: "Dashboard", url: "/dashboard", icon: LayoutDashboard },
-      { title: "Transactions", url: "/transactions", icon: Receipt },
       { title: "Cashbooks", url: "/cashbooks", icon: Wallet },
     ],
   },
@@ -41,6 +41,7 @@ const navigationGroups = [
     label: "Management",
     items: [
       { title: "Categories", url: "/categories", icon: Tags },
+      { title: "Businesses", url: "/businesses", icon: Building2 },
       { title: "Contacts", url: "/contacts", icon: Contact },
       {
         title: "Business Members",

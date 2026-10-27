@@ -12,7 +12,7 @@ export interface TransactionResponseDto {
   cashbookId: number;
   categoryId: number | null;
   contactId: number | null;
-  createdBy: string;
+  createdBy: string | null;
   createdAt: string;
   updatedAt: string;
 }

@@ -50,9 +50,7 @@ export default function Dashboard() {
   const user = useAuthStore((state) => state.user);
 
   const displayName =
-    user?.email||
     user?.username ||
-    user?.email ||
     "User";
 
   return (

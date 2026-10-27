@@ -8,6 +8,7 @@ import { PrivateRoutes } from "./PrivateRoutes";
 import Dashboard from "@/components/pages/Dashboard";
 import TransactionPage from "@/components/pages/TransactionPage";
 import CashbooksPage from "@/components/pages/CashbooksPage";
+import BusinessesPage from "@/components/pages/BusinessesPage";
 import {
   BusinessMembersPage,
   CategoriesPage,
@@ -57,6 +58,10 @@ const router = createBrowserRouter([
       {
         path: "cashbooks",
         element: <CashbooksPage />,
+      },
+      {
+        path: "businesses",
+        element: <BusinessesPage />,
       },
       {
         path: "categories",

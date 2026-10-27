@@ -4,5 +4,5 @@ import APICLIENT from "./ApiClient";
 import { TransactionRequestDto } from "@/entities/TransactionRequestDto";
 
 export default new APICLIENT<TransactionRequestDto, TransactionResponseDto>(
-  "/transactions"
+  "/api/transactions"
 );
