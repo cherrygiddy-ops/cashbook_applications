@@ -1,24 +1,26 @@
-import type { CashbookRequestDto } from "@/entities/CashbookRequestDto";
+
 import type { CashbookResponseDto } from "@/entities/CashbookResponseDto";
-import APICLIENT, { axiosInstance } from "./ApiClient";
+import { axiosInstance } from "./ApiClient";
 
 
-const apiClient = new APICLIENT<
-  CashbookRequestDto,
-  CashbookResponseDto
->("/api/cashbooks");
+const CashbookService = {
+  getAllAccessible: async (): Promise<CashbookResponseDto[]> => {
+    const response = await axiosInstance.get<CashbookResponseDto[]>(
+      "api/cashbooks",
+    );
 
-const getByBusinessId = async (
-  businessId: number | string,
-): Promise<CashbookResponseDto[]> => {
-  const response = await axiosInstance.get<CashbookResponseDto[]>(
-    `/api/cashbooks/business/${businessId}`,
-  );
+    return response.data;
+  },
 
-  return response.data;
+  getByBusinessId: async (
+    businessId: number | string,
+  ): Promise<CashbookResponseDto[]> => {
+    const response = await axiosInstance.get<CashbookResponseDto[]>(
+      `api/businesses/${businessId}/cashbooks`,
+    );
+
+    return response.data;
+  },
 };
 
-export default {
-  ...apiClient,
-  getByBusinessId,
-};
+export default CashbookService;

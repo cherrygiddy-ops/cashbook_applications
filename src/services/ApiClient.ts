@@ -75,6 +75,18 @@ class APICLIENT<TRequest, TResponse> {
       .post<TResponse>(this.endpoint, entity)
       .then((res) => res.data);
   };
+
+  
+  // Partially update a record.
+  patch = <TPatchRequest, TPatchResponse>(
+    id: number | string,
+    entity: TPatchRequest
+  ) => {
+    return axiosInstance
+      .patch<TPatchResponse>(`${this.endpoint}/${id}`, entity)
+      .then((res) => res.data);
+  };
+
 }
 
 export default APICLIENT;

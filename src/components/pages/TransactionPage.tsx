@@ -11,6 +11,7 @@ import {
   ReceiptText,
   TrendingUp,
   LoaderCircle,
+  Users,
 } from "lucide-react";
 
 import {
@@ -24,12 +25,14 @@ import {
 import useCashbooks from "@/hooks/useCashbooks";
 import useTransactions from "@/hooks/useTransactions";
 import TransactionForm from "./TransactionForm";
+import CashbookMembers from "./CashbookMembers";
 
 const TransactionPage = () => {
   const [searchParams, setSearchParams] = useSearchParams();
   const [search, setSearch] = useState("");
   const [typeFilter, setTypeFilter] = useState("ALL");
   const [dialogOpen, setDialogOpen] = useState(false);
+  const [membersDialogOpen, setMembersDialogOpen] = useState(false);
 
   const businessId = searchParams.get("businessId") ?? undefined;
   const cashbookIdParam = searchParams.get("cashbookId");
@@ -65,8 +68,6 @@ const TransactionPage = () => {
           new Date(a.transactionDate).getTime() -
           new Date(b.transactionDate).getTime();
 
-        // Use the transaction ID to make ordering deterministic
-        // when multiple transactions share the same date.
         return dateDifference || Number(a.id) - Number(b.id);
       },
     );
@@ -83,7 +84,6 @@ const TransactionPage = () => {
       balances.set(Number(transaction.id), balance);
     });
 
-    // Preserve the API's display order.
     return transactions.map((transaction) => ({
       ...transaction,
       balance: balances.get(Number(transaction.id)) ?? 0,
@@ -273,30 +273,63 @@ const TransactionPage = () => {
           </div>
         </div>
 
-        <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
-          <button
-            type="button"
-            onClick={() => setDialogOpen(true)}
-            className="inline-flex h-10 items-center justify-center gap-2 rounded-lg bg-indigo-600 px-4 text-sm font-semibold text-white shadow-sm transition hover:bg-indigo-700"
+        {/* Header actions */}
+        <div className="flex flex-wrap items-center gap-2">
+          {/* Share cashbook */}
+          <Dialog
+            open={membersDialogOpen}
+            onOpenChange={setMembersDialogOpen}
           >
-            <Plus className="h-4 w-4" />
-            Record transaction
-          </button>
+            <button
+              type="button"
+              onClick={() => setMembersDialogOpen(true)}
+              aria-label="Manage cashbook members"
+              className="inline-flex h-10 items-center justify-center gap-2 rounded-lg border border-slate-200 bg-white px-4 text-sm font-semibold text-slate-700 shadow-sm transition hover:border-indigo-300 hover:bg-indigo-50 hover:text-indigo-700"
+            >
+              <Users className="h-4 w-4" />
+              Share
+            </button>
 
-          <DialogContent className="max-h-[90dvh] overflow-y-auto sm:max-w-xl">
-            <DialogHeader>
-              <DialogTitle>Record transaction</DialogTitle>
-              <DialogDescription>
-                Add an income or expense to {activeCashbook.name}.
-              </DialogDescription>
-            </DialogHeader>
+            <DialogContent className="max-h-[90dvh] overflow-y-auto sm:max-w-2xl">
+              <DialogHeader>
+                <DialogTitle>Share cashbook</DialogTitle>
+                <DialogDescription>
+                  Manage who can access {activeCashbook.name}.
+                  Editors can work with transactions, while viewers have
+                  read-only access.
+                </DialogDescription>
+              </DialogHeader>
 
-            <TransactionForm
-              cashbookId={activeCashbookId}
-              onSuccess={() => setDialogOpen(false)}
-            />
-          </DialogContent>
-        </Dialog>
+              <CashbookMembers cashbookId={activeCashbookId} />
+            </DialogContent>
+          </Dialog>
+
+          {/* Record transaction */}
+          <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
+            <button
+              type="button"
+              onClick={() => setDialogOpen(true)}
+              className="inline-flex h-10 items-center justify-center gap-2 rounded-lg bg-indigo-600 px-4 text-sm font-semibold text-white shadow-sm transition hover:bg-indigo-700"
+            >
+              <Plus className="h-4 w-4" />
+              Record transaction
+            </button>
+
+            <DialogContent className="max-h-[90dvh] overflow-y-auto sm:max-w-xl">
+              <DialogHeader>
+                <DialogTitle>Record transaction</DialogTitle>
+                <DialogDescription>
+                  Add an income or expense to {activeCashbook.name}.
+                </DialogDescription>
+              </DialogHeader>
+
+              <TransactionForm
+                cashbookId={activeCashbookId}
+                onSuccess={() => setDialogOpen(false)}
+              />
+            </DialogContent>
+          </Dialog>
+        </div>
       </section>
 
       {/* Summary cards */}

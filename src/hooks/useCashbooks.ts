@@ -6,23 +6,27 @@ import type { CashbookResponseDto } from "@/entities/CashbookResponseDto";
 import type { ApiErrorResponse } from "@/hooks/useTransaction";
 import CashbookService from "@/services/CashbookService";
 
-const useCashbooks = (businessId: number | string | undefined) => {
+const useCashbooks = (businessId?: number | string) => {
   const query = useQuery<
     CashbookResponseDto[],
     AxiosError<ApiErrorResponse>
   >({
-    queryKey: ["cashbooks", businessId],
+    queryKey: ["cashbooks", businessId ?? "all-accessible"],
+
     queryFn: async () => {
       const cashbooks =
-        await CashbookService.getByBusinessId(businessId!);
+        businessId !== undefined && businessId !== null
+          ? await CashbookService.getByBusinessId(businessId)
+          : await CashbookService.getAllAccessible();
 
-      return cashbooks.sort(
+      return [...cashbooks].sort(
         (left, right) =>
           new Date(right.createdAt).getTime() -
           new Date(left.createdAt).getTime(),
       );
     },
-    enabled: businessId !== undefined && businessId !== null,
+
+    enabled: true,
   });
 
   const errorMessage =
